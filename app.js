@@ -29,6 +29,13 @@ const AppStore = {
             this.saveScores();
         }
 
+        // Ensure all modules have a score entry (handles adding new modules)
+        this.modules.forEach(m => {
+            if (!this.scores[m.id]) {
+                this.scores[m.id] = { completed: false, qScores: {} };
+            }
+        });
+
         this.renderHome();
     },
 
@@ -41,8 +48,9 @@ const AppStore = {
         list.innerHTML = "";
         
         this.modules.forEach((mod, idx) => {
-            const status = this.scores[mod.id]?.completed ? "✅ Completed" : "⏳ In Progress";
-            const completedClass = this.scores[mod.id]?.completed ? "completed" : "";
+            const score = this.scores[mod.id];
+            const status = score?.completed ? "✅ Completed" : "⏳ In Progress";
+            const completedClass = score?.completed ? "completed" : "";
             
             // Allow all modules to be clickable for now
             const html = `
@@ -61,12 +69,15 @@ const AppStore = {
 
         document.getElementById('home-view').classList.remove('hidden');
         document.getElementById('module-view').classList.add('hidden');
+        
+        this.updateMath();
     },
 
     openModule(id) {
         this.currentModuleId = id;
         this.currentQuestionIndex = 0;
         const mod = this.modules.find(m => m.id === id);
+        if (!mod) { console.error("Module not found:", id); return; }
         
         document.getElementById('home-view').classList.add('hidden');
         document.getElementById('module-view').classList.remove('hidden');
@@ -77,6 +88,10 @@ const AppStore = {
         document.getElementById('complete-container').classList.add('hidden');
         
         document.getElementById('lesson-content').innerHTML = mod.lessonHTML;
+        
+        // Update question counter header
+        document.getElementById('current-q-num').innerText = "—";
+        document.getElementById('total-q-num').innerText = mod.questions.length;
         
         this.updateMath();
     },
@@ -119,16 +134,29 @@ const AppStore = {
         ansArea.innerHTML = "";
         
         if (q.type === 'numeric') {
-            ansArea.innerHTML = `<input type="number" step="any" id="ans-input" placeholder="Enter number..." onkeypress="checkEnter(event)">`;
+            ansArea.innerHTML = `<input type="number" step="any" id="ans-input" placeholder="Enter your answer..." onkeypress="checkEnter(event)">`;
         } else if (q.type === 'surd') {
             ansArea.innerHTML = `<div style="display:flex; align-items:center; gap:0.5rem; font-size: 1.25rem;">
-                $\\sqrt{}$ <input type="number" id="ans-input" placeholder="number inside" style="width:100px;" onkeypress="checkEnter(event)">
+                <span style="font-size:1.5rem;">√</span> <input type="number" id="ans-input" placeholder="number inside √" style="width:120px;" onkeypress="checkEnter(event)">
             </div>`;
         } else if (q.type === 'dms') {
-            ansArea.innerHTML = `<div style="display:flex; align-items:center; gap:0.5rem; font-size: 1.25rem;">
-                <input type="number" id="ans-deg" style="width:70px;" onkeypress="checkEnter(event)">$^{\\circ}$
-                <input type="number" id="ans-min" style="width:70px;" onkeypress="checkEnter(event)">$'$
+            ansArea.innerHTML = `<div style="display:flex; align-items:center; gap:0.5rem; font-size: 1.15rem;">
+                <input type="number" id="ans-deg" placeholder="degrees" style="width:90px;" onkeypress="checkEnter(event)"> °
+                <input type="number" id="ans-min" placeholder="minutes" style="width:90px;" onkeypress="checkEnter(event)"> ʹ
             </div>`;
+        } else if (q.type === 'mcq') {
+            let optionsHTML = '<div class="mcq-options" style="display:flex; flex-direction:column; gap:0.75rem;">';
+            q.options.forEach((opt, i) => {
+                optionsHTML += `
+                    <label class="mcq-option" style="display:flex; align-items:center; gap:0.75rem; padding:0.75rem 1rem; background:#f8fafc; border:2px solid var(--border); border-radius:0.75rem; cursor:pointer; transition: all 0.2s; font-size:1.05rem;" 
+                           onmouseover="this.style.borderColor='var(--primary)'" 
+                           onmouseout="if(!this.querySelector('input').checked) this.style.borderColor='var(--border)'">
+                        <input type="radio" name="mcq-answer" value="${opt}" style="width:18px; height:18px; accent-color: var(--primary);">
+                        <span>${opt}</span>
+                    </label>`;
+            });
+            optionsHTML += '</div>';
+            ansArea.innerHTML = optionsHTML;
         }
         
         this.updateMath();
@@ -144,9 +172,16 @@ const AppStore = {
         let isCorrect = false;
 
         if (q.type === 'dms') {
-            const deg = parseFloat(document.getElementById('ans-deg').value || 0);
-            const min = parseFloat(document.getElementById('ans-min').value || 0);
+            const degEl = document.getElementById('ans-deg');
+            const minEl = document.getElementById('ans-min');
+            if (!degEl.value && !minEl.value) return;
+            const deg = parseFloat(degEl.value || 0);
+            const min = parseFloat(minEl.value || 0);
             isCorrect = (deg === q.correctAnswer[0] && min === q.correctAnswer[1]);
+        } else if (q.type === 'mcq') {
+            const selected = document.querySelector('input[name="mcq-answer"]:checked');
+            if (!selected) return; // nothing selected
+            isCorrect = (selected.value === q.correctAnswer);
         } else {
             const inputVal = document.getElementById('ans-input')?.value.trim();
             if (!inputVal && inputVal !== "0") return; // empty
@@ -178,7 +213,7 @@ const AppStore = {
                 hint.innerHTML = `<strong>💡 Hint:</strong> ${q.hintHTML}`;
                 hint.classList.add('show');
             } else if (this.currentAttempts >= 2) {
-                feedback.innerHTML = `<strong>❌ Incorrect.</strong> The correct answer involves solving appropriately.`;
+                feedback.innerHTML = `<strong>❌ Incorrect.</strong> See the worked solution below.`;
                 feedback.className = "feedback-box feedback-incorrect show";
                 document.getElementById('solution-content').innerHTML = q.solutionHTML;
                 sol.classList.remove('hidden');
@@ -192,13 +227,17 @@ const AppStore = {
         document.getElementById('submit-btn').classList.add('hidden');
         document.getElementById('next-btn').classList.remove('hidden');
         
-        // Save score if first attempt passing
+        // Ensure score structure exists
+        if (!this.scores[this.currentModuleId]) {
+            this.scores[this.currentModuleId] = { completed: false, qScores: {} };
+        }
         if (!this.scores[this.currentModuleId].qScores) {
             this.scores[this.currentModuleId].qScores = {};
         }
+        
         // Save best score for this question
         const qId = this.modules.find(m=>m.id === this.currentModuleId).questions[this.currentQuestionIndex].id;
-        const pts = (wasRight && this.currentAttempts === 1) ? 1 : 0; // 1 pt if right on first try
+        const pts = (wasRight && this.currentAttempts === 1) ? 1 : 0;
         
         // Keep highest score
         const existing = this.scores[this.currentModuleId].qScores[qId] || 0;
@@ -234,17 +273,22 @@ const AppStore = {
         this.scores[this.currentModuleId].completed = true;
         this.saveScores();
         
-        document.getElementById('score-text').innerHTML = `You earned <strong>${earned}</strong> points out of <strong>${total}</strong>.`;
+        document.getElementById('score-text').innerHTML = `You earned <strong>${earned}</strong> out of <strong>${total}</strong> points.`;
     },
 
     updateMath() {
-        if (window.renderMathInElement) {
-             window.renderMathInElement(document.body, {
-                delimiters: [
-                    {left: "$$", right: "$$", display: true},
-                    {left: "$", right: "$", display: false}
-                ]
-            });
+        try {
+            if (window.renderMathInElement) {
+                window.renderMathInElement(document.body, {
+                    delimiters: [
+                        {left: "$$", right: "$$", display: true},
+                        {left: "$", right: "$", display: false}
+                    ],
+                    throwOnError: false
+                });
+            }
+        } catch(e) {
+            console.warn("KaTeX rendering warning:", e);
         }
     }
 };

@@ -134,13 +134,16 @@ const Diagrams = {
         container.appendChild(svg);
         
         // If there's katex, render the newly added math elements
-        if (window.renderMathInElement) {
-             window.renderMathInElement(container, {
-                delimiters: [
-                    {left: "$$", right: "$$", display: true},
-                    {left: "$", right: "$", display: false}
-                ]
-            });
-        }
+        try {
+            if (window.renderMathInElement) {
+                 window.renderMathInElement(container, {
+                    delimiters: [
+                        {left: "$$", right: "$$", display: true},
+                        {left: "$", right: "$", display: false}
+                    ],
+                    throwOnError: false
+                });
+            }
+        } catch(e) { console.warn("Diagram KaTeX:", e); }
     }
 };
