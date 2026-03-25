@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parent Dashboard - Trigonometry</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app-container" id="pin-screen" style="max-width: 400px; margin-top: 10vh; text-align: center;">
+    <div class="card">
+        <h2 style="color: var(--primary); margin-bottom: 1rem;">Parent Dashboard</h2>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Please enter the PIN to view student progress.</p>
+        <input type="password" id="pin-input" placeholder="Enter PIN (default 1234)" style="text-align: center; margin-bottom: 1rem;">
+        <button class="btn btn-primary" onclick="checkPin()" style="width: 100%;">Unlock Dashboard</button>
+        <p id="pin-error" style="color: var(--error); margin-top: 1rem; display: none;">Incorrect PIN.</p>
+    </div>
+</div>
+
+<div class="app-container hidden" id="dashboard-screen" style="max-width: 800px;">
+    <header>
+        <div class="brand">
+            <h1>EduTrack Hub</h1>
+            <span style="color:var(--text-muted); font-size:0.9rem;">| Parent View</span>
+        </div>
+        <button class="parent-btn" onclick="window.location.href='index.html'">← Back to App</button>
+    </header>
+
+    <div class="card">
+        <h2>Student Progress: Trigonometry</h2>
+        <p style="color: var(--text-muted); margin-bottom: 2rem;">A summary of scores and completed modules.</p>
+
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--border);">
+                        <th style="padding: 1rem; color: var(--primary);">Module</th>
+                        <th style="padding: 1rem; color: var(--primary);">Status</th>
+                        <th style="padding: 1rem; color: var(--primary);">Score</th>
+                    </tr>
+                </thead>
+                <tbody id="scores-body">
+                    <!-- Javascript populates this -->
+                </tbody>
+            </table>
+        </div>
+
+        <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+            <button class="btn btn-secondary" onclick="exportCsv()">Download CSV</button>
+            <button class="btn btn-secondary" style="color: var(--error); border-color: var(--error);" onclick="clearData()">Reset All Data</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const EXPECTED_PIN = "1234";
+
+    function checkPin() {
+        if (document.getElementById('pin-input').value === EXPECTED_PIN) {
+            document.getElementById('pin-screen').classList.add('hidden');
+            document.getElementById('dashboard-screen').classList.remove('hidden');
+            loadScores();
+        } else {
+            document.getElementById('pin-error').style.display = 'block';
+        }
+    }
+
+    // Allow enter key
+    document.getElementById('pin-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') checkPin();
+    });
+
+    const moduleNames = {
+        "module1": "1. Pythagoras' Theorem",
+        "module2": "2. Trigonometric Ratios",
+        "module3": "3. Finding Side Lengths",
+        "module4": "4. Finding Angles",
+        "module5": "5. Practical Problems"
+    };
+
+    function loadScores() {
+        const d = localStorage.getItem('trigonometry_scores');
+        const tbody = document.getElementById('scores-body');
+        tbody.innerHTML = "";
+
+        if (!d) {
+            tbody.innerHTML = "<tr><td colspan='3' style='padding:1rem; text-align:center;'>No data recorded yet.</td></tr>";
+            return;
+        }
+
+        const scores = JSON.parse(d);
+        
+        Object.keys(moduleNames).forEach(modId => {
+            const data = scores[modId];
+            let status = "Not Started";
+            let scoreStr = "-";
+            
+            if (data) {
+                if (data.completed) {
+                    status = "<span style='color: var(--success); font-weight: 600;'>Completed</span>";
+                } else if (Object.keys(data.qScores || {}).length > 0) {
+                    status = "<span style='color: var(--accent); font-weight: 600;'>In Progress</span>";
+                }
+
+                if (data.qScores) {
+                    let totalObj = Object.values(data.qScores);
+                    if (totalObj.length > 0) {
+                        let total = totalObj.reduce((a,b)=>a+b, 0);
+                        scoreStr = `${total} points`;
+                    }
+                }
+            }
+
+            tbody.innerHTML += `
+                <tr style="border-bottom: 1px solid var(--border);">
+                    <td style="padding: 1rem; font-weight: 500;">${moduleNames[modId]}</td>
+                    <td style="padding: 1rem;">${status}</td>
+                    <td style="padding: 1rem; font-weight: bold;">${scoreStr}</td>
+                </tr>
+            `;
+        });
+    }
+
+    function exportCsv() {
+        const d = localStorage.getItem('trigonometry_scores');
+        if(!d) return alert("No data to export.");
+        const scores = JSON.parse(d);
+        
+        let csv = "Module,Status,Points\\n";
+        Object.keys(moduleNames).forEach(modId => {
+            const data = scores[modId];
+            let status = data?.completed ? "Completed" : (Object.keys(data?.qScores||{}).length > 0 ? "In Progress" : "Not Started");
+            let pts = data?.qScores ? Object.values(data.qScores).reduce((a,b)=>a+b,0) : 0;
+            csv += `"${moduleNames[modId]}","${status}",${pts}\\n`;
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Student_Trigonometry_Scores_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+    }
+
+    function clearData() {
+        if(confirm("Are you sure you want to permanently delete all student progress? This cannot be undone.")) {
+            localStorage.removeItem('trigonometry_scores');
+            loadScores();
+        }
+    }
+</script>
+
+</body>
+</html>

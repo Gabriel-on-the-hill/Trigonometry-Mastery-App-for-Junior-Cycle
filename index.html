@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trigonometry Mastery - Interactive</title>
+    
+    <!-- KaTeX for Maths -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    
+    <!-- Global CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <div class="brand">
+            <h1>EduTrack Hub</h1>
+            <span style="color:var(--text-muted); font-size:0.9rem;">| Trigonometry (Higher Level)</span>
+        </div>
+        <button class="parent-btn" onclick="openParentDashboard()">📊 Parent View</button>
+    </header>
+
+    <main class="card" id="main-content">
+        
+        <!-- HOME / MODULE SELECTOR -->
+        <div id="home-view">
+            <h2>Your Learning Path</h2>
+            <p style="color: var(--text-muted); margin-bottom: 1rem;">Complete these modules to master right-angled triangles.</p>
+            
+            <div id="module-list">
+                <!-- Modules injected here by app.js -->
+            </div>
+        </div>
+
+        <!-- ACTIVE MODULE VIEW -->
+        <div id="module-view" class="hidden">
+            <div class="view-header">
+                <button class="back-btn" onclick="returnToHome()">← Back to Modules</button>
+                <div class="progress-info" style="font-weight: 600; color: var(--text-muted);">
+                    Question <span id="current-q-num">1</span> of <span id="total-q-num">5</span>
+                </div>
+            </div>
+
+            <!-- Lesson Panel (Hidden after practice starts) -->
+            <div id="lesson-container" class="lesson-panel hidden">
+                <div id="lesson-content"></div>
+                <button class="btn btn-primary" style="margin-top: 1rem;" onclick="startPractice()">Start Practice →</button>
+            </div>
+
+            <!-- Practice Area -->
+            <div id="practice-container" class="hidden">
+                <div class="question-container" id="question-text">
+                    <!-- Question injected here -->
+                </div>
+                
+                <div id="diagram-container" class="diagram-container">
+                    <!-- SVG injected here -->
+                </div>
+
+                <div class="answer-area" id="answer-area">
+                    <!-- Input fields injected here based on question type -->
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary" id="submit-btn" onclick="checkAnswer()">Submit Answer</button>
+                    <button class="btn btn-secondary hidden" id="next-btn" onclick="nextQuestion()">Next Question →</button>
+                </div>
+
+                <div id="feedback" class="feedback-box"></div>
+                <div id="hint-box" class="feedback-box feedback-hint"></div>
+                <div id="solution-box" class="worked-solution hidden">
+                    <h4>Worked Solution</h4>
+                    <div id="solution-content"></div>
+                </div>
+            </div>
+            
+            <!-- Module Complete Screen -->
+            <div id="complete-container" class="hidden" style="text-align: center; padding: 2rem;">
+                <h2 style="font-size: 2rem; color: var(--primary);">Module Complete! 🎉</h2>
+                <p style="font-size: 1.2rem; margin: 1rem 0;" id="score-text">You scored X/Y.</p>
+                <button class="btn btn-primary" onclick="returnToHome()">Back to Modules</button>
+            </div>
+
+        </div>
+
+    </main>
+</div>
+
+<!-- Scripts -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+<!-- App components -->
+<script src="diagrams.js"></script>
+<!-- Data files -->
+<script src="data/module1.js"></script>
+<script src="data/module2.js"></script>
+<script src="data/module3.js"></script>
+<script src="data/module4.js"></script>
+<script src="data/module5.js"></script>
+<!-- Core logic -->
+<script src="app.js"></script>
+
+</body>
+</html>
