@@ -155,3 +155,5 @@ const Diagrams = {
         } catch(e) { console.warn("Diagram KaTeX:", e); }
     }
 };
+
+window.Diagrams = Diagrams;
