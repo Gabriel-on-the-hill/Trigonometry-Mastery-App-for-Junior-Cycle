@@ -52,9 +52,12 @@ const Diagrams = {
 
         const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+        svg.setAttribute("width", W);
+        svg.setAttribute("height", H);
         svg.classList.add("triangle-draw");
         svg.style.width = "100%";
         svg.style.maxWidth = "400px";
+        svg.style.height = "auto";
 
         // Draw Right Angle Square
         const sqSize = 15;
